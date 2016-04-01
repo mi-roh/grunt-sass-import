@@ -12,93 +12,40 @@ var nodePath = require('path');
 
 module.exports = function(grunt) {
   grunt.registerMultiTask('sass_import', 'Glob functionality for loading Sass partials', function() {
-    var allowedExtensions = ['.scss'];
-    var includeExtension = false;
 
     var options = this.options({
       includeExtension: false,
-      basePath: ''
+      allowedExtensions: ['.scss', '.sass']
     });
 
     this.files.forEach(function (file) {
       var output = '';
-      var destRoot = nodePath.dirname(options.basePath + file.dest);
+      var destRoot = nodePath.dirname(file.dest);
 
-      file.orig.src.forEach(function (path) {
-        var resultFiles = [];
+      file.src.forEach(function (path) {
 
-        // Advanced syntax
-        if (typeof path == 'object') {
-          // Handling *first* files
-          if ('first' in path) {
-            grunt.file.expand(options.basePath + path.first).forEach(function (match) {
-              var file = splitFilename(match);
+        // Simple syntax
+        grunt.file.expand(path).forEach(function (match) {
+          var includeName = '',
+              fileParts = splitFilename(match);
 
-              // Discard if extension is now allowed
-              if (allowedExtensions.indexOf(file.extension) == -1) {
-                return;
-              }
-
-              resultFiles.push(options.includeExtension ? match : file.name);
-            });
+          // Discard if extension is now allowed
+          if (options.allowedExtensions.indexOf(fileParts.extension) == -1) {
+            return;
           }
 
-          // Handling regular files
-          grunt.file.expand(options.basePath + path.path).forEach(function (match) {
-            var file = splitFilename(match);
-
-              // Discard if extension is now allowed
-              if (allowedExtensions.indexOf(file.extension) == -1) {
-                return;
-              }
-
-              // Discard if already included in *first*
-              if (('first' in path) && (options.basePath.concat(path.first).indexOf(file.name) != -1)) {
-                return;
-              }
-
-              // Discard if present in *last*
-              if (('last' in path) && (options.basePath.concat(path.last).indexOf(file.name) != -1)) {
-                return;
-              }
-
-              resultFiles.push(options.includeExtension ? match : file.name);
-          });
-
-          // Handling *last* files
-          if ('last' in path) {
-            grunt.file.expand(options.basePath + path.last).forEach(function (match) {
-              var file = splitFilename(match);
-
-              // Discard if extension is now allowed
-              if (allowedExtensions.indexOf(file.extension) == -1) {
-                return;
-              }
-
-              resultFiles.push(options.includeExtension ? match : file.name);
-            });
+          // Disable Loop
+          if (match === file.dest) {
+            return;
           }
-        } else {
-          // Simple syntax
-          grunt.file.expand(options.basePath + path).forEach(function (match) {
-            var file = splitFilename(match);
 
-            // Discard if extension is now allowed
-            if (allowedExtensions.indexOf(file.extension) == -1) {
-              return;
-            }
-
-            resultFiles.push(options.includeExtension ? match : file.name);
-          });
-        }
-
-        resultFiles.forEach(function (file) {
-          file = nodePath.relative(destRoot, file);
-          output += buildOutputLine(file.replace(options.basePath, ''));
+          includeName = options.includeExtension ? match : fileParts.name;
+          output += buildOutputLine(nodePath.relative(destRoot, includeName));
         });
+
       });
 
-      grunt.file.write(options.basePath + file.dest, output);
+      grunt.file.write(file.dest, output);
       grunt.log.writeln('File "' + file.dest + '" created.');
     });
 

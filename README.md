@@ -44,12 +44,11 @@ grunt.initConfig({
 
 ### Options
 
-#### options.basePath
-- Type: `String`
-- Default value: `''` (empty string)
+#### options.allowedExtensions
+- Type: `Array`
+- Default value: `['.sass', '.scss']`
 
-Defines the environment for the Sass files to live in. All the paths defined in `files` as well as the destination files will be relative to `basePath`.
-A common example would be setting `basePath` to `'sass/'`.
+Defines the allowed file extensions.
 
 #### options.includeExtension
 - Type: `Boolean`
@@ -59,7 +58,7 @@ Whether to include file extensions in the `@import` statements (e.g. `@import fi
 
 ### Including files
 One of the main issues with Sass partial loaders is the source order is important. For example, if you declare a variable in partial `_a.scss` and make use of it in `_b.scss`, you have to import `_a.scss` and then `_b.scss`, otherwise you'll see an error.
-This Grunt plugin offers a **very basic** support for manipulating source order.
+This Grunt plugin offers support for manipulating source order.
 
 #### Basic syntax
 If you don't care about source order, you can simply pass an array of file paths to be included.
@@ -87,7 +86,11 @@ grunt.initConfig({
   sass_import: {
     options: {},
     files: {
-      'main.scss': [{path: 'global/*', after: 'global/_global.scss'}]
+      'main.scss': [
+        'global/*', 
+        '!global/_global.scss'
+        'global/_global.scss'
+      ]
     },
   },
 });
@@ -100,23 +103,52 @@ grunt.initConfig({
   sass_import: {
     options: {},
     files: {
-      'main.scss': [{path: 'global/*', first: 'global/_headings.scss'}]
+      'main.scss': [
+        'global/_headings.scss',
+        'global/*'
+      ]
     },
   },
 });
 ```
+
+Exclude Files if necessary. 
+Targetfiles will not import theme self.
+
+```js
+grunt.initConfig({
+  sass_import: {
+    options: {},
+    files: {
+      'lib/_all.scss': [
+        'lib/**/*',
+        '!lib/_disable.scss'
+      ]
+    },
+  },
+});
+```
+
 
 ### Typical use case
 A typical use case is to have `sass_import` creating a main Sass file with all the imports which will then feed into a Sass task to generate the CSS code.
 
 ```js
 grunt.initConfig({
+  path : {
+    css : {
+      src : 'sass/',
+      dist : 'css/'
+    }
+  }
   sass_import: {
     options: {
-      basePath: 'sass/'
     },
     files: {
-      'main.scss': [{path: 'global/*', first: 'global/_headings.scss'}]
+      '<%= path.css.src %>main.scss': [
+        '<%= path.css.src %>global/_headings.scss',
+        '<%= path.css.src %>global/*'
+      ]
     },
   },
 
@@ -126,14 +158,17 @@ grunt.initConfig({
         style: 'compressed'
       },
       files: {
-        'web/css/main.css': 'main.scss'
+        '<%= path.css.dist %>main.css': '<%= path.css.src %>main.scss'
       }
     }
   },
 
   watch: {
     stylesheets: {
-      files: ['sass/**/*.scss'],
+      files: [
+        '<%= path.css.dist %>**/*.scss',
+        '<%= path.css.dist %>**/*.sass'
+      ],
       tasks: ['sass_import', 'sass']
     }
   },
